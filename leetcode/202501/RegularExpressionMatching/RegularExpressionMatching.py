@@ -51,11 +51,10 @@ class Solution:
     
     def isMatchDp(self, s: str, p: str):  # dynamic programming
         m, n = len(s), len(p)
-        dp = [[False] * (n + 1) for _ in range(m + 1)]
+        dp = [[False] * (n + 1) for _ in range(m + 1)]  # dp[i][j] means s[:i] and p[:j] match or not
         
         dp[m][n] = True
-
-        for i in range(m, -1, -1):
+        for i in range(m, -1, -1):  # s[m] represents empty string
             for j in range(n - 1, -1, -1):
                 first_match = i < m and (s[i] == p[j] or p[j] == '.')
                 if j + 1 < n and p[j + 1] == '*':
@@ -63,7 +62,7 @@ class Solution:
                 else:
                     dp[i][j] = first_match and dp[i + 1][j + 1]
 
-        return dp[0][0], dp
+        return dp[0][0]
 
 
 if __name__ == '__main__':
@@ -74,5 +73,7 @@ if __name__ == '__main__':
     solution = Solution()
     solution.isMatch(p, s)
     solution.isMatch_(p, s)
-    b, dp = solution.isMatchDp(p, s)
+    b, dp = solution.isMatchDp(s, p)
     len(s)
+    len(dp)
+    dp
