@@ -37,7 +37,7 @@ func string2integer(s string) int {
 	}
 
 	for ;(i < len(s)) && (s[i] >= '0') && (s[i] <= '9'); i++ {		
-		res = res*10 + int(s[i] - '0')
+		res = res*10 + int(s[i] - '0')  // transfer string to int
 		if res > math.MaxInt32 {
 			if sign == 1 {
 				return math.MaxInt32
