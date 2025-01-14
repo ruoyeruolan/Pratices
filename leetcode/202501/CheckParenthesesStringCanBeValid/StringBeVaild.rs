@@ -40,7 +40,7 @@ impl Solution {
         if length % 2 == 1 {return false}
 
         let s: Vec<char> = s.chars().collect();
-        let locked: Vec<char> = locked.chars().collect();
+        let locked: Vec<char> = locked.chars().collect();  // convert string to char array
         let mut op: Vec<usize> = Vec::new();
         let mut unlocked: Vec<usize> = Vec::new();
 
@@ -50,8 +50,13 @@ impl Solution {
             } else if s[i] == '(' {
                 op.push(i);
             } else if s[i] == ')' {
-                if let Some(_) = op.pop() {} else if let Some(_) = unlocked.pop() {} else {return false}
-
+                if let Some(_) = op.pop() {
+                    // if value is not None, do nothing
+                } else if let Some(_) = unlocked.pop() {
+                    // if value is not None, do nothing
+                } else {
+                    return false
+                }
             }
         }
 
