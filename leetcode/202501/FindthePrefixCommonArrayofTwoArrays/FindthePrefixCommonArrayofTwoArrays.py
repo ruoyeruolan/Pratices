@@ -5,7 +5,7 @@
 @Author     : ryrl
 @Email      : ryrl970311@gmail.com
 @Time       : 2025/01/14 11:53
-@Description: 
+@Description: leetcode 2657 
 """
 
 # You are given two **0-indexed** integer permutations `A` and `B` of length `n`.
