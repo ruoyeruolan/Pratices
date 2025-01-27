@@ -67,3 +67,17 @@ class Solution:
                 queue.append((neighbor, distance + 1))
                 max_distance = max(max_distance, distance + 1)
         return max_distance
+    
+    def maximumInvitations_(self, favorite: List[int]) -> int:
+        n = len(favorite)
+        inDegree = [0] * n
+
+        for person in range(n):
+            inDegree[favorite[person]] += 1
+        
+        q = deque()
+        for person in range(n):
+            if inDegree[person] == 0:
+                q.append(person)
+        depth = [1] * n
+        pass
