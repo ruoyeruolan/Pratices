@@ -71,4 +71,4 @@ Let's consider an example with the array `nums = [3, 4, 5, 1, 2]`. The smallest 
 
 - Compare `nums[n - 1]` with `nums[0]`. If `nums[0] < nums[n - 1]`, increment the inversion count.
 
-- If the total inversion count is less than or equal to 1, return true. Otherwise, return false.
+- I1f the total inversion count is less than or equal to 1, return true. Otherwise, return false.
