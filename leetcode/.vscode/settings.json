@@ -3,5 +3,7 @@
         "enableCodeCompletionPro": true
     },
     "marscode.enableInlineCommand": true,
-    "marscode.chatLanguage": "en"
+    "marscode.chatLanguage": "en",
+    "python.analysis.autoImportCompletions": true,
+    "python.analysis.typeCheckingMode": "standard"
 }
