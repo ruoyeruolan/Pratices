@@ -36,4 +36,3 @@ if __name__ == '__main__':
     nums = [4,1,3,3]
     s = Solution()
     s.countBadPairs(nums)
-s
