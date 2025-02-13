@@ -31,5 +31,11 @@ Notice that the order of the output and the order of the triplets does not matte
  
 **Constraints**:
 
-- 3 <= nums.length <= 3000
-- -105 <= nums[i] <= 105
+- `3 <= nums.length <= 3000`
+- `-105 <= nums[i] <= 105`
+
+# Solution
+
+## Two Pointers
+
+## Hash Table
