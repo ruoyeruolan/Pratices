@@ -49,7 +49,7 @@ class Solution:
             self.dfs(board, word, nrow, ncol, curr_row - 1, curr_col, k + 1, visited) or 
             self.dfs(board, word, nrow, ncol, curr_row, curr_col + 1, k + 1, visited) or 
             self.dfs(board, word, nrow, ncol, curr_row, curr_col - 1, k + 1, visited)
-        )
+        )  # every time self.dfs run successfully, k + 1 to represent word paired one, if the k == len(word), all paired
         visited.remove((curr_row, curr_col))
         return res
 
