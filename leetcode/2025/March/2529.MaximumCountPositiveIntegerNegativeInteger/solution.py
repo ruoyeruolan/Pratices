@@ -23,7 +23,7 @@ class Solution:
             idx += 1
         return max(pos, neg)
    
-    252def lower_bound(self, nums):
+    def lower_bound(self, nums):
         start, end = 0, len(nums) - 1
         index = len(nums)
 
