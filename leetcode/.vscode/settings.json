@@ -7,5 +7,5 @@
     "python.analysis.autoImportCompletions": true,
     "python.analysis.typeCheckingMode": "standard",
     "markdown.validate.enabled": false,
-    "rust-analyzer.checkOnSave": false
+    "rust-analyzer.checkOnSave": true
 }
