@@ -7,5 +7,9 @@ name = "dividearray"
 version = "0.1.0"
 
 [[package]]
+name = "slidingwindow"
+version = "0.1.0"
+
+[[package]]
 name = "solutions"
 version = "0.1.0"
