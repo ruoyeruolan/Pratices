@@ -10,7 +10,7 @@ package main
 func longestNiceSubarray(nums []int) int {
 	n := len(nums)
 	var used, start, length int
-	for end := 0; end < n; end++ {
+	for end := range n { // end := 0; end < n; end++
 		for (used & nums[end]) != 0 {
 			used ^= nums[start]
 			start++
