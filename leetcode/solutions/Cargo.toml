@@ -6,7 +6,8 @@ edition = "2024"
 [workspace]
 members = [
     "dividearray", 
-    "slidingwindow",
+    "slidingwindow", 
+    "unionfind",
 ]
 
 [dependencies]
