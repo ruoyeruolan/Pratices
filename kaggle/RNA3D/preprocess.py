@@ -57,34 +57,6 @@ def pairing_rules(sequence: str, edges: list, nodes_number: list) -> list:
             for j in list2_sorted[pos:]:
                 edges.append((i, j))
                 edges.append((j, i))
-    # base_positions = defaultdict(list)
-    # for idx, base in enumerate(sequence):
-    #     base_positions[base].append(idx)
-    
-    # # for base in base_positions:
-    # #     base_positions[base] = np.array(base_positions[base], dtype=np.int32)
-
-    # base_arrays = {base: np.array(positions, dtype=np.int32) for base, positions in base_positions.items()}
-
-    # for (b1, b2) in pairs:
-    #     arr1 = base_arrays[b1] # if b1 in base_arrays else np.array([], dtype=np.int32)
-    #     arr2 = base_arrays[b2] # if b2 in base_arrays else np.array([], dtype=np.int32)
-        
-    #     if arr1.size == 0 or arr2.size == 0:
-    #         continue
-        
-    #     i = arr1[:, None]   # shape (len(arr1), 1)
-    #     j = arr2[None, :]   # shape (1, len(arr2))
-        
-    #     mask = (j > i + 1)
-        
-    #     i_idx, j_idx = np.where(mask)
-        
-    #     src = arr1[i_idx]
-    #     dst = arr2[j_idx]
-        
-    #     edges.extend(zip(src, dst))
-    #     edges.extend(zip(dst, src))
     return edges
 
 def create_rna_graph(
@@ -109,21 +81,7 @@ def create_rna_graph(
 
     node_features = torch.cat([base_one_hot, resid_embedding], dim=1)
     
-    # num_nodes = data.shape[0]
     edges = []
-    # if use_spatial_distance and all(col in data.columns for col in ['x_1', 'y_1', 'z_1']):
-        
-    #     coords = data[['x_1', 'y_1', 'z_1']].values
-    #     distances = squareform(pdist(coords))
-
-    #     src, dst = np.where((
-    #         distances < distance_threshold) & 
-    #         (np.triu(np.ones_like(distances), k=1) > 0)
-    #     )
-
-    #     edges.extend(zip(src, dst))
-    #     edges.extend(zip(dst, src))
-        
     nodes_number = data['resid'].to_list()
     for i in range(num_nodes - 1):
         if i in nodes_number and i + 1 in nodes_number:
@@ -155,5 +113,3 @@ if __name__ == '__main__':
     graph_list = [create_rna_graph(data=group) for _, group in tqdm(df, total=len(df))]
 
     train_loader = DataLoader(graph_list, batch_size=8, shuffle=True)
-    # in_channel = graph_list[0].x.size(-1)
-

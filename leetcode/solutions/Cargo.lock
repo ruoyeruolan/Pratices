@@ -15,5 +15,9 @@ name = "solutions"
 version = "0.1.0"
 
 [[package]]
+name = "sorting"
+version = "0.1.0"
+
+[[package]]
 name = "unionfind"
 version = "0.1.0"
