@@ -34,7 +34,7 @@ class RNA3DFolding(InMemoryDataset):
     def __init__(
             self, 
             root: str | None = None, 
-            split: str | None = None,
+            split: str | None = 'train',
             transform: Callable[..., Any] | None = None, 
             pre_transform: Callable[..., Any] | None = None, 
             pre_filter: Callable[..., Any] | None = None, 
@@ -48,9 +48,10 @@ class RNA3DFolding(InMemoryDataset):
         )
 
         path = osp.join(self.processed_dir, f'{split}.pt')
+        self.load(path=path)
     
     @property
-    def raw_file_name(self) -> List[str]:
+    def raw_file_names(self) -> List[str]:
         return [
             'test_sequences.csv',
             'train_sequences.csv', 'train_labels.csv',
@@ -62,23 +63,23 @@ class RNA3DFolding(InMemoryDataset):
         return osp.join(self.root, 'full', 'processed')
     
     @property
-    def processed_file_name(self) -> List[str]:
-        return ['train.pt', 'test.pt', 'val.pt']
+    def processed_file_names(self) -> List[str]:
+        return ['train.pt', 'test.pt', 'validation.pt']
     
     def download(self) -> None:
         fs.rm(self.raw_dir)
-        path = download_url(self.url, self.root)
-        extract_zip(path=path, folder=self.root)
+        # if not osp.exists(osp.join(self.root, 'stanford-rna-3d-folding.zip')):
+        path = f'{self.root}/stanford-rna-3d-folding.zip'
+        extract_zip(path=path, folder=f'{self.root}/stanford-rna-3d-folding')
         os.rename(osp.join(self.root, 'stanford-rna-3d-folding'), self.raw_dir)
-        os.unlink(path)
     
     def preprocess(self, fname: str = 'train') -> pd.DataFrame:
 
-        seq = pd.read_csv(osp.join(self.raw_dir, fname, '_sequences.csv'))
+        seq = pd.read_csv(osp.join(self.raw_dir, f'{fname}_sequences.csv'))
         seq['temporal_cutoff'] = seq['temporal_cutoff'].apply(pd.to_datetime)
         dit = seq.set_index('target_id').to_dict()
 
-        labels = pd.read_csv(osp.join(self.raw_dir, fname, '_labels.csv'))
+        labels = pd.read_csv(osp.join(self.raw_dir, f'{fname}_labels.csv'))
         labels['ID'] = labels['ID'].str.replace(r'_\d+$', '', regex=True)
         labels = labels.assign(**{str(key): labels['ID'].map(val) for key, val in dit.items()})
 
@@ -161,7 +162,7 @@ class RNA3DFolding(InMemoryDataset):
 
     def process(self) -> None:
 
-        for split in ['train', 'val', 'test']:
+        for split in ['train', 'validation', 'test']:
 
             df = self.preprocess(split)
             df = df.groupby(by=['ID'])
@@ -183,3 +184,11 @@ class RNA3DFolding(InMemoryDataset):
             self.save(data_list=data_list, path=osp.join(self.processed_dir, f'{split}.pt'))
 
 
+if __name__ == '__main__':
+
+    root = '/Users/wakala/IdeaProjects/Practices/kaggle/data/demo'
+    rna_data = RNA3DFolding(root=root)
+
+    extract_zip(f'{root}/stanford-rna-3d-folding.zip', f'{root}/stanford-rna-3d-folding')
+    os.rename(osp.join(root, 'stanford-rna-3d-folding'), f'{root}/raw')
+    

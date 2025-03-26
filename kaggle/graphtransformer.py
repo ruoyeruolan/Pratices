@@ -25,7 +25,8 @@ from torch_geometric.nn import GPSConv, GINEConv, global_add_pool
 
 def load_dataset(path: str | None = None):
     if path is None:
-        path = '/public/workspace/ryrl/data/pygeometrics/zinc/'
+        # path = '/public/workspace/ryrl/data/pygeometrics/zinc/'
+        path = '/Users/wakala/IdeaProjects/Practices/kaggle/data/demo'
     transform = T.AddRandomWalkPE(walk_length=20, attr_name='pe')
     train_dataset = ZINC(root=path, subset=False, split='train', pre_transform=transform)
     val_dataset = ZINC(root=path, subset=False, split='val', pre_transform=transform)
