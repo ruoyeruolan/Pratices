@@ -15,6 +15,7 @@ from typing import Callable, Any, List
 from collections import defaultdict
 
 import bisect
+import numpy as np
 import pandas as pd
 import polars as pl
 
@@ -22,6 +23,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from torch import Tensor
 from torch_geometric.io import fs
 from torch_geometric.data import Data, InMemoryDataset
 from torch_geometric.data import Dataset, download_url, extract_zip
@@ -43,12 +45,17 @@ class RNA3DFolding(InMemoryDataset):
     ) -> None:
         assert split in ['train', 'test', 'val']
         super().__init__(
-            root, transform, pre_transform, 
+            root, transform, pre_transform,
             pre_filter, force_reload=force_reload, log=log
         )
 
+        if not callable(self.log):
+            self.log = lambda x: None
+
+        # self.raw_dir = self.raw_dir
         path = osp.join(self.processed_dir, f'{split}.pt')
         self.load(path=path)
+
     
     @property
     def raw_file_names(self) -> List[str]:
@@ -70,113 +77,102 @@ class RNA3DFolding(InMemoryDataset):
         fs.rm(self.raw_dir)
         # if not osp.exists(osp.join(self.root, 'stanford-rna-3d-folding.zip')):
         path = f'{self.root}/stanford-rna-3d-folding.zip'
-        extract_zip(path=path, folder=f'{self.root}/stanford-rna-3d-folding')
+
+        if not osp.exists(f'{self.root}/stanford-rna-3d-folding'):
+            extract_zip(path=path, folder=f'{self.root}/stanford-rna-3d-folding')
         os.rename(osp.join(self.root, 'stanford-rna-3d-folding'), self.raw_dir)
     
-    def preprocess(self, fname: str = 'train') -> pd.DataFrame:
+    def preprocess(self, fname: str = 'train') -> dict:
 
-        seq = pd.read_csv(osp.join(self.raw_dir, f'{fname}_sequences.csv'))
-        seq['temporal_cutoff'] = seq['temporal_cutoff'].apply(pd.to_datetime)
-        dit = seq.set_index('target_id').to_dict()
-
-        labels = pd.read_csv(osp.join(self.raw_dir, f'{fname}_labels.csv'))
-        labels['ID'] = labels['ID'].str.replace(r'_\d+$', '', regex=True)
-        labels = labels.assign(**{str(key): labels['ID'].map(val) for key, val in dit.items()})
+        dit = {'A': 0, 'C': 1, 'G': 2, 'U': 3, 'X': 4, '-': 5}
+        data = pd.read_csv(osp.join(self.raw_dir, f'{fname}_sequences.csv'))
 
         if fname == 'train':
-            cutoff = pd.Timestamp('2022-05-27')
-            labels = labels.query(f'temporal_cutoff < {cutoff}')
-        return labels
-    
-    def pairing_rules(
-            self, 
-            sequence: str, 
-            edges: list, 
-            nodes_number: list
-    ) -> list:
-        pairs = {
-            ('A','U'), ('U','A'),
-            ('G','C'), ('C','G'),
-            ('G','U'), ('U','G')
-            }
+            data['temporal_cutoff'] = data['temporal_cutoff'].apply(pd.to_datetime)
+            cut_off = pd.Timestamp('2022-05-27')
+            data = data.query(f'temporal_cutoff < "{cut_off}"')
 
-        base_positions = defaultdict(list)
-        for idx, base in enumerate(sequence):
-            if idx in nodes_number:
-                base_positions[base].append(idx)
+        self.log('Encoding Sequence ...')
+        nrows, _ = data.shape
+        data['seq'] = [
+            torch.tensor([dit[base] for base in seq], dtype=torch.float64)
+            for seq in tqdm(data['sequence'], total=nrows)
+        ]
 
-        for (b1, b2) in pairs:
-            list1_sorted = sorted(base_positions[b1])
-            list2_sorted = sorted(base_positions[b2])
+        if fname != 'test':
+            labels = pd.read_csv(osp.join(self.raw_dir, f'{fname}_labels.csv'))
+            labels['ID'] = labels['ID'].str.replace(r'_\d+$', '', regex=True)
 
-            for i in list1_sorted:
-                pos = bisect.bisect_right(list2_sorted, i + 1)
-                for j in list2_sorted[pos:]:
-                    edges.append((i, j))
-                    edges.append((j, i))
-        return edges
-    
-    def create_rna_graph(
-            self,
-            data: pd.DataFrame, 
-            use_pairing_rules: bool = True, 
-            embedding_dim: int = 64
-):
-        base_to_int = {'A': 0, 'C': 1, 'G': 2, 'U': 3, 'X': 4, '-': 5}
-        num_bases = 6
-
-        num_nodes = maxLength = len(data['sequence'].iloc[0])
-        embeddingLayer = nn.Embedding(maxLength + 1, embedding_dim=embedding_dim)
-
-        # Apply vectorized operations
-        bases = torch.tensor(data['resname'].map(base_to_int).values, dtype=torch.long)
-        resids = torch.tensor(data['resid'].values, dtype=torch.long)
-
-        base_one_hot = F.one_hot(bases, num_classes=num_bases).float()
-        resid_embedding = embeddingLayer(resids)
-
-        node_features = torch.cat([base_one_hot, resid_embedding], dim=1)
-        
-        edges = []
-        nodes_number = data['resid'].to_list()
-        for i in range(num_nodes - 1):
-            if i in nodes_number and i + 1 in nodes_number:
-                edges.append((i, i + 1))
-                edges.append((i + 1, i))
-        
-        if use_pairing_rules:
-            sequence = data['sequence'].iloc[0]
-            edges = self.pairing_rules(sequence=sequence, edges=edges, nodes_number=nodes_number)
+            grouped = labels.groupby('ID')
             
-        edges = list(set(edges))
-        edge_index = torch.tensor(edges, dtype=torch.long).t().contiguous()
+            self.log('Processing labels ...')
+            data['labels'] = [
+                torch.tensor(grouped.get_group(group)[['x_1', 'y_1', 'z_1']].values) 
+                for group in tqdm(data['target_id'], total=nrows)
+            ]
         
-        graph_data = Data(x=node_features, edge_index=edge_index)
+        self.log('Creating adjacency Matrix ...')
+        data = data.assign(
+            adj=[self.create_rna_adjacency_matrix(seq) for seq in tqdm(data['sequence'], total=nrows)]
+        )
+        return data.to_dict(orient='index')
+    
+    def create_rna_adjacency_matrix(self, sequence: str) -> Tensor:
+        n = len(sequence)
+        
+        seq_array = np.fromiter(sequence, dtype='U1', count=n)
 
-        if 'x_1' in data.columns:
-            graph_data.y = torch.tensor(data[['x_1', 'y_1', 'z_1']].values, dtype=torch.float)
+        adj = np.zeros((n ,n), dtype=np.int8)
+        pairs_types = {
+            ('A', 'U'): 1,
+            ('G', 'C'): 2,
+            ('G', 'U'): 3,
+            
+            ('A', 'G'): 4,
+            ('C', 'U'): 5,
+            ('A', 'C'): 6,
+            ('U', 'U'): 7,
+            ('G', 'G'): 8,
+            ('C', 'C'): 9,
+            ('A', 'A'): 10,
+        }
 
-        graph_data.sequence = sequence
-        graph_data.ID = data['ID'].iloc[0]
-        return graph_data
+        for (base1, base2), bond_type in pairs_types.items():
+            mask = (seq_array == base1)[:, None] & (seq_array == base2)[None, :]
+            adj[mask] = bond_type
+            adj[mask.T] = bond_type
 
+        np.fill_diagonal(adj, 0)
+        return torch.tensor(adj, dtype=torch.long) 
+    
     def process(self) -> None:
-
+        
         for split in ['train', 'validation', 'test']:
-
-            df = self.preprocess(split)
-            df = df.groupby(by=['ID'])
+            dit = self.preprocess(split)
             
-            pbar = tqdm(total=len(df))
+            n = len(data)
+
+            pbar = tqdm(total=n)
             pbar.set_description(f'Processing {split} dataset ...')
-            data_list = []
 
-            for _, grouped in df:
+            data_list =[]
+            for key in dit.keys():
+                mols = dit[key]
 
-                data = self.create_rna_graph(data=grouped)
+                x: Tensor = mols['seq'].to(torch.long).view(-1, 1)
+                y: Tensor = mols['labels'].to(torch.float)
+
+                adj: Tensor = mols['adj']
+                edge_index = adj.nonzero(as_tuple=False).t().contiguous()
+                edge_attr = adj[edge_index[0], edge_index[1]].to(torch.long)
+
+                data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr, y=y)
+
+                if self.pre_filter is not None and self.pre_filter(data):
+                    continue
 
                 if self.pre_transform is not None:
-                    data = self.pre_transform(data)
+                    self.pre_transform(data)
                 
                 data_list.append(data)
                 pbar.update(1)
@@ -188,6 +184,8 @@ if __name__ == '__main__':
 
     root = '/Users/wakala/IdeaProjects/Practices/kaggle/data/demo'
     rna_data = RNA3DFolding(root=root)
+
+    # osp.exists()
 
     extract_zip(f'{root}/stanford-rna-3d-folding.zip', f'{root}/stanford-rna-3d-folding')
     os.rename(osp.join(root, 'stanford-rna-3d-folding'), f'{root}/raw')
