@@ -11,14 +11,9 @@ from typing import Dict, Any, Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 
-import torch_geometric.transforms as T
-from torch_geometric.datasets import ZINC
-from torch_geometric.loader import DataLoader
+from torch_geometric.nn import GPSConv, GINEConv
 from torch_geometric.nn.attention import PerformerAttention
-from torch_geometric.nn import GPSConv, GINEConv, global_add_pool
 
 
 class GPS(nn.Module):
@@ -29,7 +24,7 @@ class GPS(nn.Module):
         self.node_emb = nn.Embedding(num_embeddings=7, embedding_dim=channels - pe_dim)
         self.pe_lin = nn.Linear(in_features=20, out_features=pe_dim)
         self.pe_norm = nn.BatchNorm1d(num_features=20)
-        self.edge_emb = nn.Embedding(num_embeddings=4, embedding_dim=channels)
+        self.edge_emb = nn.Embedding(num_embeddings=11, embedding_dim=channels)
 
         self.convs = nn.ModuleList()
         for _ in range(num_layers):
@@ -51,8 +46,10 @@ class GPS(nn.Module):
         
         self.mlp = nn.Sequential(
             nn.Linear(channels, channels // 2),
+            nn.LayerNorm(channels // 2),
             nn.ReLU(),
             nn.Linear(channels // 2, channels // 4),
+            nn.LayerNorm(channels // 4),
             nn.ReLU(),
             nn.Linear(channels // 4, 3)
         )
@@ -70,7 +67,7 @@ class GPS(nn.Module):
 
         for conv in self.convs:
             x = conv(x, edge_index, batch, edge_attr=edge_attr)
-        x = global_add_pool(x, batch)
+        # x = global_add_pool(x, batch)
         return self.mlp(x)
 
 class RedrawProjection:

@@ -12,12 +12,9 @@ import os.path as osp
 from tqdm import tqdm
 
 from typing import Callable, Any, List
-from collections import defaultdict
 
-import bisect
 import numpy as np
 import pandas as pd
-import polars as pl
 
 import torch
 import torch.nn as nn
@@ -26,7 +23,7 @@ import torch.nn.functional as F
 from torch import Tensor
 from torch_geometric.io import fs
 from torch_geometric.data import Data, InMemoryDataset
-from torch_geometric.data import Dataset, download_url, extract_zip
+from torch_geometric.data import extract_zip
 
 
 class RNA3DFolding(InMemoryDataset):
@@ -40,17 +37,17 @@ class RNA3DFolding(InMemoryDataset):
             transform: Callable[..., Any] | None = None, 
             pre_transform: Callable[..., Any] | None = None, 
             pre_filter: Callable[..., Any] | None = None, 
-            log: bool = True, 
+            # log: bool = True, 
             force_reload: bool = False
     ) -> None:
-        assert split in ['train', 'test', 'val']
+        assert split in ['train', 'test', 'validation']
         super().__init__(
             root, transform, pre_transform,
-            pre_filter, force_reload=force_reload, log=log
+            pre_filter, force_reload=force_reload
         )
 
-        if not callable(self.log):
-            self.log = lambda x: None
+        # if not callable(self.log):
+        #     self.log = lambda x: None
 
         # self.raw_dir = self.raw_dir
         path = osp.join(self.processed_dir, f'{split}.pt')
@@ -92,26 +89,26 @@ class RNA3DFolding(InMemoryDataset):
             cut_off = pd.Timestamp('2022-05-27')
             data = data.query(f'temporal_cutoff < "{cut_off}"')
 
-        self.log('Encoding Sequence ...')
+        print('Encoding Sequence ...')
         nrows, _ = data.shape
-        data['seq'] = [
+        data = data.assign(seq=[
             torch.tensor([dit[base] for base in seq], dtype=torch.float64)
             for seq in tqdm(data['sequence'], total=nrows)
-        ]
+        ])
 
         if fname != 'test':
             labels = pd.read_csv(osp.join(self.raw_dir, f'{fname}_labels.csv'))
-            labels['ID'] = labels['ID'].str.replace(r'_\d+$', '', regex=True)
+            labels = labels.assign(ID=labels['ID'].str.replace(r'_\d+$', '', regex=True))
 
             grouped = labels.groupby('ID')
             
-            self.log('Processing labels ...')
-            data['labels'] = [
+            print('Processing labels ...')
+            data = data.assign(labels=[
                 torch.tensor(grouped.get_group(group)[['x_1', 'y_1', 'z_1']].values) 
                 for group in tqdm(data['target_id'], total=nrows)
-            ]
+            ])
         
-        self.log('Creating adjacency Matrix ...')
+        print('Creating adjacency Matrix ...')
         data = data.assign(
             adj=[self.create_rna_adjacency_matrix(seq) for seq in tqdm(data['sequence'], total=nrows)]
         )
@@ -150,7 +147,7 @@ class RNA3DFolding(InMemoryDataset):
         for split in ['train', 'validation', 'test']:
             dit = self.preprocess(split)
             
-            n = len(data)
+            n = len(dit)
 
             pbar = tqdm(total=n)
             pbar.set_description(f'Processing {split} dataset ...')
@@ -160,7 +157,7 @@ class RNA3DFolding(InMemoryDataset):
                 mols = dit[key]
 
                 x: Tensor = mols['seq'].to(torch.long).view(-1, 1)
-                y: Tensor = mols['labels'].to(torch.float)
+                y: Tensor | None = mols['labels'].to(torch.float) if 'labels' in mols else None
 
                 adj: Tensor = mols['adj']
                 edge_index = adj.nonzero(as_tuple=False).t().contiguous()
@@ -172,7 +169,7 @@ class RNA3DFolding(InMemoryDataset):
                     continue
 
                 if self.pre_transform is not None:
-                    self.pre_transform(data)
+                    data = self.pre_transform(data)
                 
                 data_list.append(data)
                 pbar.update(1)
@@ -182,11 +179,6 @@ class RNA3DFolding(InMemoryDataset):
 
 if __name__ == '__main__':
 
-    root = '/Users/wakala/IdeaProjects/Practices/kaggle/data/demo'
-    rna_data = RNA3DFolding(root=root)
-
-    # osp.exists()
-
-    extract_zip(f'{root}/stanford-rna-3d-folding.zip', f'{root}/stanford-rna-3d-folding')
-    os.rename(osp.join(root, 'stanford-rna-3d-folding'), f'{root}/raw')
-    
+    root = '/public/workspace/ryrl/IdeaProjects/Projects/torch/pyGenometrics/Cases/rna3d/'
+    train = RNA3DFolding(root=root, split='train')
+    print(train)
