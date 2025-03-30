@@ -5,8 +5,9 @@ edition = "2024"
 
 [workspace]
 members = [
-    "dividearray", 
-    "slidingwindow", "sorting", 
+    "dividearray", "greeedy", 
+    "slidingwindow", 
+    "sorting", 
     "unionfind",
 ]
 
