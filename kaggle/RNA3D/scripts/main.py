@@ -107,11 +107,11 @@ def run():
     optimizer = AdamW(model.parameters(), lr=1e-4, weight_decay=1e-5)
     scheduler = ReduceLROnPlateau(optimizer=optimizer, mode='min', factor=.5, patience=20, min_lr=1e-6)
 
-    patience = 30  # Number of epochs to wait for improvement
-    min_delta = 0.0001  # Minimum change to qualify as improvement
-    patience_counter = 0
-    best_val_rmsd = float('inf')
-    best_model_path = '/public/workspace/ryrl/IdeaProjects/Projects/torch/pyGenometrics/Cases/rna3d/best_model.pt'
+    # patience = 30  # Number of epochs to wait for improvement
+    # min_delta = 0.0001  # Minimum change to qualify as improvement
+    # patience_counter = 0
+    # best_val_rmsd = float('inf')
+    # best_model_path = '/public/workspace/ryrl/IdeaProjects/Projects/torch/pyGenometrics/Cases/rna3d/best_model.pt'
 
     for epoch in range(1, 1001):
         loss = train(model, train_loader, optimizer, device)
@@ -119,23 +119,23 @@ def run():
 
         scheduler.step(val_rmsd)
         print(f'Epoch: {epoch:02d}, Loss: {loss:.4f}, Val: {val_rmsd:.4f}')
-        if val_rmsd < best_val_rmsd - min_delta:
-            best_val_rmsd = val_rmsd
-            patience_counter = 0
-            # Save the best model
-            torch.save(model.state_dict(), best_model_path)
-            print(f"New best model saved with RMSD: {best_val_rmsd:.4f}")
-        else:
-            patience_counter += 1
-            print(f"No improvement: {patience_counter}/{patience}")
+    #     if val_rmsd < best_val_rmsd - min_delta:
+    #         best_val_rmsd = val_rmsd
+    #         patience_counter = 0
+    #         # Save the best model
+    #         torch.save(model.state_dict(), best_model_path)
+    #         print(f"New best model saved with RMSD: {best_val_rmsd:.4f}")
+    #     else:
+    #         patience_counter += 1
+    #         print(f"No improvement: {patience_counter}/{patience}")
             
-        # Check if early stopping should be triggered
-        if patience_counter >= patience:
-            print(f"Early stopping triggered after {epoch} epochs")
-            break
+    #     # Check if early stopping should be triggered
+    #     if patience_counter >= patience:
+    #         print(f"Early stopping triggered after {epoch} epochs")
+    #         break
     
-    model.load_state_dict(torch.load(best_model_path))
-    print(f"Training complete. Best validation RMSD: {best_val_rmsd:.4f}")
+    # model.load_state_dict(torch.load(best_model_path))
+    # print(f"Training complete. Best validation RMSD: {best_val_rmsd:.4f}")
     
     # Save final model (which is now the best model)
     torch.save(
