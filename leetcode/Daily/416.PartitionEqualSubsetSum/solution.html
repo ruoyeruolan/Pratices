@@ -1,0 +1,361 @@
+<!--
+// @Introduce  : 
+// @File       : solution.html
+// @Author     : ryrl
+// @Email      : ryrl970311@gmail.com
+// @Time       : 2025/04/07 18:30
+// @Description:
+-->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualization of DP in problem subset</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 自定义样式 */
+        .dp-cell {
+            min-width: 40px; /* 单元格最小宽度 */
+            transition: background-color 0.5s ease, transform 0.3s ease; /* 平滑过渡效果 */
+        }
+        .dp-cell.true {
+            background-color: #4ade80; /* 绿色代表 True */
+            color: #14532d; /* 深绿色文字 */
+        }
+        .dp-cell.false {
+            background-color: #f3f4f6; /* 浅灰色代表 False */
+            color: #4b5563; /* 深灰色文字 */
+        }
+        .dp-cell.checking {
+            outline: 2px solid #3b82f6; /* 蓝色轮廓表示正在检查 */
+            transform: scale(1.1); /* 放大效果 */
+        }
+         .dp-cell.checking-source {
+            outline: 2px solid #f97316; /* 橙色轮廓表示来源 */
+             transform: scale(1.1);
+        }
+        .num-highlight {
+            background-color: #fef08a; /* 黄色背景高亮当前数字 */
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+        /* 加载动画 */
+        .loader {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-left: 8px;
+            vertical-align: middle; /* 垂直居中对齐 */
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 按钮样式 */
+        button {
+            transition: background-color 0.3s ease, transform 0.1s ease;
+        }
+        button:active {
+            transform: scale(0.95); /* 点击时缩小 */
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="font-sans bg-gray-50 p-4 md:p-8">
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">子集和问题动态规划过程可视化</h1>
+
+        <div class="mb-6 p-4 bg-blue-50 rounded-md border border-blue-200">
+            <label for="numsInput" class="block text-sm font-medium text-gray-700 mb-1">输入数组 nums (用逗号分隔):</label>
+            <div class="flex flex-col sm:flex-row gap-2">
+                <input type="text" id="numsInput" value="1, 5, 11, 5" class="flex-grow p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                <button id="startButton" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    开始/重置
+                </button>
+            </div>
+             <p class="mt-2 text-xs text-gray-500">示例: 1, 5, 11, 5 或 2, 3, 7, 8, 10</p>
+        </div>
+
+        <div id="info" class="mb-4 text-gray-700 space-y-1 hidden">
+            <p><strong>输入数组 (Nums):</strong> <code id="displayNums" class="bg-gray-100 p-1 rounded"></code></p>
+            <p><strong>总和 (Total):</strong> <code id="totalSum" class="bg-gray-100 p-1 rounded"></code></p>
+            <p><strong>目标和 (Target):</strong> <code id="targetSum" class="bg-gray-100 p-1 rounded"></code></p>
+            <p id="oddTotalMessage" class="text-red-600 font-semibold hidden">总和为奇数，无法平分。</p>
+        </div>
+
+        <div id="dpVisualization" class="mb-6 hidden">
+            <h2 class="text-lg font-semibold mb-2 text-gray-800">DP 数组状态: <code class="text-sm">(dp[i] 表示是否能凑成和为 i)</code></h2>
+            <div id="dpArrayContainer" class="flex flex-wrap gap-2 p-3 bg-gray-100 rounded-md border border-gray-200 overflow-x-auto">
+                </div>
+        </div>
+
+         <div id="currentNumDisplay" class="mb-4 text-gray-700 hidden">
+            <strong>当前处理的数字 (num):</strong> <code id="currentNumValue" class="text-lg font-bold p-1 rounded"></code>
+        </div>
+
+
+        <div id="controls" class="mb-4 text-center hidden">
+            <button id="nextStepButton" class="px-5 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-gray-400">
+                下一步 <span id="loader" class="loader hidden"></span>
+            </button>
+        </div>
+
+        <div id="explanation" class="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-sm text-yellow-800 min-h-[50px] hidden">
+            请点击“开始/重置”按钮来初始化。
+        </div>
+
+        <div id="result" class="mt-6 text-center text-xl font-semibold hidden">
+            </div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const numsInput = document.getElementById('numsInput');
+        const startButton = document.getElementById('startButton');
+        const infoDiv = document.getElementById('info');
+        const displayNums = document.getElementById('displayNums');
+        const totalSumSpan = document.getElementById('totalSum');
+        const targetSumSpan = document.getElementById('targetSum');
+        const oddTotalMessage = document.getElementById('oddTotalMessage');
+        const dpVisualizationDiv = document.getElementById('dpVisualization');
+        const dpArrayContainer = document.getElementById('dpArrayContainer');
+        const currentNumDisplay = document.getElementById('currentNumDisplay');
+        const currentNumValue = document.getElementById('currentNumValue');
+        const controlsDiv = document.getElementById('controls');
+        const nextStepButton = document.getElementById('nextStepButton');
+        const loader = document.getElementById('loader');
+        const explanationDiv = document.getElementById('explanation');
+        const resultDiv = document.getElementById('result');
+
+        // --- State Variables ---
+        let nums = [];
+        let total = 0;
+        let target = 0;
+        let dp = [];
+        let currentNumIndex = -1; // 当前处理 nums 的索引
+        let currentDpCheckIndex = -1; // 当前内循环检查 dp 的索引
+        let state = 'initial'; // 'initial', 'processing_num', 'processing_dp', 'done'
+        let animationTimeout; // 用于清除之前的动画高亮
+
+        // --- Functions ---
+
+        // 清理高亮效果
+        function clearHighlights() {
+            clearTimeout(animationTimeout); // 清除延时取消高亮
+            const cells = dpArrayContainer.querySelectorAll('.dp-cell');
+            cells.forEach(cell => cell.classList.remove('checking', 'checking-source', 'transform', 'scale-110'));
+            currentNumValue.classList.remove('num-highlight');
+        }
+
+        // 更新解释文本
+        function updateExplanation(text) {
+            explanationDiv.innerHTML = text; // 使用 innerHTML 来允许简单的 HTML 标签
+            explanationDiv.classList.remove('hidden');
+        }
+
+        // 渲染 DP 数组
+        function renderDpArray() {
+            dpArrayContainer.innerHTML = ''; // 清空容器
+            dp.forEach((value, index) => {
+                const cell = document.createElement('div');
+                cell.classList.add('dp-cell', 'p-2', 'rounded', 'text-center', 'font-mono', 'border', 'border-gray-300', value ? 'true' : 'false');
+                cell.innerHTML = `<span class="block text-xs text-gray-500">${index}</span>${value ? 'T' : 'F'}`;
+                cell.dataset.index = index; // 存储索引方便查找
+                dpArrayContainer.appendChild(cell);
+            });
+            dpVisualizationDiv.classList.remove('hidden');
+        }
+
+        // 初始化或重置状态
+        function initialize() {
+            clearHighlights();
+            state = 'initial';
+            currentNumIndex = -1;
+            currentDpCheckIndex = -1;
+
+            // 1. 解析输入
+            const rawInput = numsInput.value.trim();
+            if (!rawInput) {
+                updateExplanation("请输入有效的数组！");
+                infoDiv.classList.add('hidden');
+                dpVisualizationDiv.classList.add('hidden');
+                controlsDiv.classList.add('hidden');
+                resultDiv.classList.add('hidden');
+                currentNumDisplay.classList.add('hidden');
+                return;
+            }
+            nums = rawInput.split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+
+            if (nums.some(isNaN)) {
+                 updateExplanation("输入包含无效数字，请检查。");
+                 return;
+            }
+
+            displayNums.textContent = `[${nums.join(', ')}]`;
+
+            // 2. 计算 total 和 target
+            total = nums.reduce((sum, num) => sum + num, 0);
+            target = Math.floor(total / 2); // 使用 Math.floor 确保整数除法
+
+            totalSumSpan.textContent = total;
+            targetSumSpan.textContent = target;
+            infoDiv.classList.remove('hidden');
+
+            // 3. 检查 total 是否为奇数
+            if (total % 2 !== 0) {
+                oddTotalMessage.classList.remove('hidden');
+                updateExplanation(`总和 ${total} 是奇数，无法将数组分成两个和相等的子集。`);
+                dpVisualizationDiv.classList.add('hidden');
+                controlsDiv.classList.add('hidden');
+                resultDiv.textContent = "结果: False (总和为奇数)";
+                resultDiv.className = 'mt-6 text-center text-xl font-semibold text-red-600'; // 红色表示 False
+                resultDiv.classList.remove('hidden');
+                currentNumDisplay.classList.add('hidden');
+                state = 'done';
+                nextStepButton.disabled = true;
+                return;
+            } else {
+                oddTotalMessage.classList.add('hidden');
+            }
+
+            // 4. 初始化 dp 数组
+            dp = new Array(target + 1).fill(false);
+            dp[0] = true; // Base case: sum 0 is always possible
+
+            // 5. 渲染初始 dp 数组
+            renderDpArray();
+            updateExplanation(`初始化完成。总和=${total}, 目标=${target}。<br>dp 数组已创建，大小为 ${target + 1}。<br>dp[0] 设置为 True (总和 0 可以通过空集实现)。<br>点击“下一步”开始处理第一个数字。`);
+
+            // 6. 显示控件和结果区域（初始为空）
+            controlsDiv.classList.remove('hidden');
+            resultDiv.textContent = ""; // 清空之前的结果
+            resultDiv.classList.add('hidden');
+            currentNumDisplay.classList.add('hidden'); // 隐藏当前数字显示
+            nextStepButton.disabled = false; // 启用按钮
+            state = 'processing_num'; // 准备处理第一个数字
+        }
+
+        // 执行下一步动画
+        function nextStep() {
+            clearHighlights(); // 清除上一步的高亮
+            nextStepButton.disabled = true; // 禁用按钮防止快速点击
+            loader.classList.remove('hidden'); // 显示加载动画
+
+            // --- 动画延迟 ---
+            setTimeout(() => {
+                if (state === 'processing_num') {
+                    currentNumIndex++; // 移动到下一个数字
+                    if (currentNumIndex >= nums.length) {
+                        // 所有数字处理完毕
+                        state = 'done';
+                        const finalResult = dp[target];
+                        updateExplanation(`所有数字处理完毕。检查 dp[target] (即 dp[${target}]) 的值。`);
+                        resultDiv.textContent = `最终结果: ${finalResult}`;
+                        resultDiv.className = `mt-6 text-center text-xl font-semibold ${finalResult ? 'text-green-600' : 'text-red-600'}`;
+                        resultDiv.classList.remove('hidden');
+                        controlsDiv.classList.add('hidden'); // 隐藏下一步按钮
+                        currentNumDisplay.classList.add('hidden');
+
+                         // 高亮最终结果的 dp cell
+                         const targetCell = dpArrayContainer.querySelector(`.dp-cell[data-index="${target}"]`);
+                         if(targetCell) {
+                             targetCell.classList.add('checking'); // 用 checking 样式高亮
+                             targetCell.style.transition = 'none'; // 立即高亮
+                             animationTimeout = setTimeout(() => targetCell.classList.remove('checking'), 1500); // 稍后移除高亮
+                         }
+
+                    } else {
+                        // 处理当前数字
+                        const currentNum = nums[currentNumIndex];
+                        currentNumValue.textContent = currentNum;
+                        currentNumValue.classList.add('num-highlight'); // 高亮当前数字
+                        currentNumDisplay.classList.remove('hidden');
+                        currentDpCheckIndex = target; // 内循环从 target 开始
+                        state = 'processing_dp';
+                        updateExplanation(`开始处理数字 <code class="num-highlight">${currentNum}</code>。<br>将从后向前检查 dp 数组 (从索引 ${target} 到 ${currentNum})。`);
+                    }
+                } else if (state === 'processing_dp') {
+                    const currentNum = nums[currentNumIndex];
+
+                    // 检查是否还有需要处理的 dp 索引
+                    if (currentDpCheckIndex < currentNum) {
+                        // 当前数字的 dp 更新完成，准备处理下一个数字
+                        state = 'processing_num';
+                        updateExplanation(`数字 <code class="num-highlight">${currentNum}</code> 处理完毕。<br>点击“下一步”处理下一个数字（如果还有）。`);
+                        currentNumDisplay.classList.add('hidden'); // 处理完一个数后隐藏
+                    } else {
+                        // 处理当前的 dp 索引
+                        const idx = currentDpCheckIndex;
+                        const sourceIdx = idx - currentNum;
+                        let explanationText = `处理数字 <code class="num-highlight">${currentNum}</code>: 检查 dp[${idx}]。`;
+
+                        // 高亮当前检查的 dp[idx] 和来源 dp[idx - num]
+                        const targetCell = dpArrayContainer.querySelector(`.dp-cell[data-index="${idx}"]`);
+                        const sourceCell = dpArrayContainer.querySelector(`.dp-cell[data-index="${sourceIdx}"]`);
+
+                        if (targetCell) targetCell.classList.add('checking');
+                        if (sourceCell) sourceCell.classList.add('checking-source');
+
+                        explanationText += `<br>计算: dp[${idx}] = dp[${idx}] (当前是 ${dp[idx]}) OR dp[${idx - currentNum}] (即 dp[${sourceIdx}], 当前是 ${dp[sourceIdx]})。`;
+
+                        // 执行 DP 更新逻辑
+                        const originalValue = dp[idx];
+                        if (dp[sourceIdx]) { // 只有当 dp[idx - num] 为 True 时才可能更新
+                            dp[idx] = true; // 更新 dp 数组
+                        }
+
+                        // 如果值发生变化，更新显示
+                        if (dp[idx] && !originalValue) {
+                            renderDpArray(); // 重新渲染以显示更新
+                            // 需要重新查找 cell 因为 DOM 可能已重建
+                             const updatedTargetCell = dpArrayContainer.querySelector(`.dp-cell[data-index="${idx}"]`);
+                             const updatedSourceCell = dpArrayContainer.querySelector(`.dp-cell[data-index="${sourceIdx}"]`);
+                             if (updatedTargetCell) updatedTargetCell.classList.add('checking');
+                             if (updatedSourceCell) updatedSourceCell.classList.add('checking-source');
+                            explanationText += `<br>因为 dp[${sourceIdx}] 是 True，所以 dp[${idx}] 更新为 <strong class="text-green-600">True</strong>。`;
+                        } else if (dp[sourceIdx]) {
+                             explanationText += `<br>dp[${sourceIdx}] 是 True，但 dp[${idx}] 已经是 True，保持 <strong class="text-green-600">True</strong>。`;
+                        }
+                         else {
+                            explanationText += `<br>因为 dp[${sourceIdx}] 是 False，dp[${idx}] 保持 ${dp[idx] ? '<strong class="text-green-600">True</strong>' : '<strong class="text-gray-600">False</strong>'}。`;
+                        }
+
+                        updateExplanation(explanationText);
+
+                        // 准备检查下一个索引
+                        currentDpCheckIndex--;
+
+                         // 短暂高亮后移除
+                         animationTimeout = setTimeout(() => {
+                            if (targetCell) targetCell.classList.remove('checking');
+                            if (sourceCell) sourceCell.classList.remove('checking-source');
+                         }, 800); // 延迟时间略小于下一步的间隔
+                    }
+                }
+
+                nextStepButton.disabled = state === 'done'; // 如果完成则禁用按钮
+                loader.classList.add('hidden'); // 隐藏加载动画
+            }, 1000); // 1秒延迟，让用户看清变化
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', initialize);
+        nextStepButton.addEventListener('click', nextStep);
+
+        // --- Initial call ---
+        // initialize(); // Optionally initialize on page load with default value
+         updateExplanation("请输入数组并点击“开始/重置”按钮进行初始化。"); // Initial message
+
+    </script>
+</body>
+</html>
