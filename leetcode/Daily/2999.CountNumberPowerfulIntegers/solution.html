@@ -1,0 +1,417 @@
+<!--
+// @Introduce  : 
+// @File       : solution.html
+// @Author     : ryrl
+// @Email      : ryrl970311@gmail.com
+// @Time       : 2025/04/10 17:25
+// @Description:
+-->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Powerful Integer Calculation Explainer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        /* Custom styles for animation elements */
+        .highlight {
+            background-color: #fef08a; /* Yellow highlight */
+            padding: 0 2px;
+            border-radius: 3px;
+            font-weight: 600;
+            transition: background-color 0.3s ease-in-out;
+        }
+        .code-block {
+            background-color: #1f2937; /* Dark gray for code */
+            color: #d1d5db; /* Light gray text */
+            padding: 1rem;
+            border-radius: 0.5rem; /* Rounded corners */
+            font-family: monospace;
+            white-space: pre-wrap; /* Wrap long lines */
+            overflow-x: auto; /* Allow horizontal scroll if needed */
+        }
+        .step {
+            border-left: 3px solid #60a5fa; /* Blue left border */
+            padding-left: 1rem;
+            margin-bottom: 0.75rem;
+            transition: background-color 0.3s ease-in-out;
+        }
+        .step-active {
+            background-color: #e0f2fe; /* Light blue background for active step */
+        }
+        .number-part {
+            display: inline-block;
+            padding: 2px 4px;
+            margin: 0 1px;
+            border-radius: 4px;
+            transition: background-color 0.3s ease-in-out, color 0.3s ease-in-out;
+        }
+        .prefix-part {
+            background-color: #bfdbfe; /* Light blue for prefix */
+            color: #1e3a8a; /* Dark blue text */
+        }
+        .suffix-part {
+            background-color: #fed7aa; /* Light orange for suffix */
+            color: #854d0e; /* Dark orange text */
+        }
+        .current-digit {
+            background-color: #fecaca; /* Light red for current digit */
+            color: #991b1b; /* Dark red text */
+            font-weight: bold;
+        }
+        .comparison {
+             background-color: #d1fae5; /* Light green for comparison */
+             padding: 0.5rem;
+             border-radius: 0.375rem;
+             margin-top: 0.5rem;
+        }
+        /* Ensure buttons and inputs look good */
+        input[type="number"], input[type="text"], button {
+            padding: 0.5rem 1rem;
+            border-radius: 0.375rem; /* Rounded corners */
+            border: 1px solid #d1d5db; /* Gray border */
+            margin-right: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        button {
+            background-color: #3b82f6; /* Blue button */
+            color: white;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #2563eb; /* Darker blue on hover */
+        }
+        #animationArea > div {
+            margin-bottom: 1.5rem;
+            padding: 1rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+
+    <div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+        <h1 class="text-2xl font-bold mb-4 text-center text-gray-800">Powerful Integer Calculation Explainer</h1>
+
+        <div class="mb-6">
+            <h2 class="text-xl font-semibold mb-2 text-gray-700">Python Code:</h2>
+            <div class="code-block">
+class Solution:
+    def numberOfPowerfulInt(self, start: int, finish: int, limit: int, s: str) -> int:
+        start_ = str(start - 1)
+        finish_ = str(finish)
+        # The result is count(finish) - count(start - 1)
+        return self.calculate(finish_, s, limit) - self.calculate(start_, s, limit)
+
+    def calculate(self, x: str, s: str, limit: int) -> int:
+        n = len(x)
+        m = len(s)
+
+        # Base Case 1: If x is shorter than s, no number up to x can have s as a suffix.
+        if n < m:
+            return 0
+        # Base Case 2: If x has the same length as s.
+        if n == m:
+            # Only count 1 if x itself is >= s and its digits are <= limit.
+            # The original code simplifies this slightly, assuming prefix digits <= limit check
+            # is handled implicitly by the structure for n > m.
+            # Here, we stick to the original code's direct comparison for n == m.
+            # A more rigorous check would ensure digits of x are <= limit.
+            return 1 if x >= s else 0
+
+        # Separate x into prefix and suffix
+        suffix = x[n - m :]
+        prefix = x[:n - m]
+        pre_len = len(prefix)
+        count = 0
+
+        # Calculate contribution from numbers shorter than x but with the same prefix length structure
+        power_val = 1 # (limit + 1)^0
+        has_violated_limit = False
+        for i in range(pre_len):
+            digit = int(prefix[i])
+            power_val = pow(limit + 1, pre_len - 1 - i) # (limit + 1)^(remaining positions - 1)
+
+            # Count numbers with a smaller digit at this position
+            # Any digit from 0 to digit-1 can be placed here.
+            # Digits must be <= limit.
+            upper_bound = min(digit, limit + 1)
+            count += upper_bound * power_val
+
+            # If the current digit itself exceeds the limit, all subsequent numbers
+            # formed by completing the prefix will also violate the limit.
+            # We have already counted all valid numbers with smaller prefixes.
+            if digit > limit:
+                 has_violated_limit = True
+                 break # Stop processing prefix
+
+        # If the prefix digits were all within the limit
+        if not has_violated_limit:
+            # Finally, check if the number x itself (prefix + suffix) is powerful
+            # Check if the suffix of x is >= s
+            if suffix >= s:
+                count += 1
+
+        return count
+            </div>
+        </div>
+
+        <div class="mb-6 p-4 bg-gray-100 rounded-md">
+            <h2 class="text-xl font-semibold mb-3 text-gray-700">Inputs:</h2>
+            <div class="flex flex-wrap items-center">
+                <label for="start" class="mr-2 font-medium">Start:</label>
+                <input type="number" id="start" value="1" min="1">
+                <label for="finish" class="mr-2 font-medium">Finish:</label>
+                <input type="number" id="finish" value="100" min="1">
+                <label for="limit" class="mr-2 font-medium">Limit:</label>
+                <input type="number" id="limit" value="4" min="0" max="9">
+                <label for="s" class="mr-2 font-medium">S (Suffix):</label>
+                <input type="text" id="s" value="2" pattern="\d+">
+                <button id="startButton" onclick="startAnimation()">Visualize Calculation</button>
+            </div>
+             <p class="text-sm text-gray-600 mt-2">Note: A number is "powerful" if its suffix matches 's' and all digits *before* the suffix are less than or equal to 'limit'.</p>
+        </div>
+
+        <div class="mb-4">
+            <h2 class="text-xl font-semibold mb-2 text-gray-700">Visualization:</h2>
+            <div id="animationArea" class="space-y-4">
+                </div>
+        </div>
+
+         <div>
+            <h2 class="text-xl font-semibold mb-2 text-gray-700">Result:</h2>
+            <div id="resultArea" class="p-4 bg-blue-100 text-blue-800 rounded-md font-semibold text-lg">
+                Enter values and click "Visualize Calculation".
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const animationArea = document.getElementById('animationArea');
+        const resultArea = document.getElementById('resultArea');
+        const delay = 700; // Delay between animation steps in milliseconds
+
+        // Helper function to pause execution
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Helper function to add a step to the animation area
+        function addStep(content, parentElement, isActive = false) {
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `step ${isActive ? 'step-active' : ''}`;
+            stepDiv.innerHTML = content;
+            parentElement.appendChild(stepDiv);
+            // Scroll to the new step
+            stepDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            return stepDiv;
+        }
+
+        // Helper function to highlight parts of the number string
+        function highlightNumber(xStr, prefixLen, currentDigitIndex = -1) {
+            if (prefixLen <= 0) { // Only suffix or no prefix
+                 return `<span class="number-part suffix-part">${xStr}</span>`;
+            }
+            const prefix = xStr.substring(0, prefixLen);
+            const suffix = xStr.substring(prefixLen);
+            let prefixHtml = '';
+            for(let i = 0; i < prefix.length; i++) {
+                const digitClass = (i === currentDigitIndex) ? 'current-digit' : 'prefix-part';
+                prefixHtml += `<span class="number-part ${digitClass}">${prefix[i]}</span>`;
+            }
+            return prefixHtml + `<span class="number-part suffix-part">${suffix}</span>`;
+        }
+
+        // The core calculation logic, adapted for animation
+        async function calculateAnimated(xStr, s, limit, parentElement) {
+            addStep(`Calculating for x = <span class="font-mono font-semibold">${xStr}</span>, s = <span class="font-mono font-semibold">${s}</span>, limit = ${limit}`, parentElement, true);
+            await sleep(delay);
+
+            const n = xStr.length;
+            const m = s.length;
+            let currentStep;
+
+            // --- Base Case 1: n < m ---
+            if (n < m) {
+                currentStep = addStep(`Length of x (${n}) is less than length of s (${m}).`, parentElement);
+                await sleep(delay);
+                addStep(`Result for ${xStr}: <span class="font-bold text-blue-600">0</span>`, parentElement, true);
+                return 0;
+            }
+
+            // --- Base Case 2: n == m ---
+            if (n === m) {
+                currentStep = addStep(`Length of x (${n}) equals length of s (${m}). Comparing x and s...`, parentElement);
+                 await sleep(delay);
+                 const comparisonResult = xStr >= s;
+                 addStep(`Comparing <span class="font-mono">${xStr}</span> >= <span class="font-mono">${s}</span>: ${comparisonResult}. (Note: Original code assumes prefix digits are handled elsewhere. This comparison is direct.)`, parentElement);
+                 await sleep(delay);
+                 const result = comparisonResult ? 1 : 0;
+                 addStep(`Result for ${xStr}: <span class="font-bold text-blue-600">${result}</span>`, parentElement, true);
+                 return result;
+            }
+
+            // --- Main Calculation: n > m ---
+            const preLen = n - m;
+            const suffix = xStr.substring(preLen);
+            const prefix = xStr.substring(0, preLen);
+            let count = 0;
+            let hasViolatedLimit = false;
+
+            currentStep = addStep(`Splitting x = ${highlightNumber(xStr, preLen)} into prefix = <span class="font-mono number-part prefix-part">${prefix}</span> and suffix = <span class="font-mono number-part suffix-part">${suffix}</span>. Prefix length = ${preLen}. Initialize count = 0.`, parentElement);
+            await sleep(delay * 1.5);
+
+            // --- Prefix Iteration ---
+             addStep(`Iterating through prefix digits: <span class="font-mono">${prefix}</span>...`, parentElement);
+             await sleep(delay);
+
+            for (let i = 0; i < preLen; i++) {
+                const digit = parseInt(prefix[i]);
+                const remainingDigits = preLen - 1 - i;
+                const powerVal = Math.pow(limit + 1, remainingDigits);
+
+                currentStep = addStep(`Processing prefix digit at index ${i}: ${highlightNumber(xStr, preLen, i)}. Digit = ${digit}.`, parentElement, true);
+                await sleep(delay * 1.5);
+
+                // Calculate contribution from smaller digits at this position
+                const upperBound = Math.min(digit, limit + 1); // Digits 0 to upperBound-1 are valid smaller digits
+                const contribution = upperBound * powerVal;
+
+                if (contribution > 0) {
+                     addStep(`Digits 0 to ${upperBound - 1} can be placed here. Each allows <span class="font-mono">(${limit} + 1)^${remainingDigits} = ${powerVal}</span> combinations for the remaining ${remainingDigits} prefix positions.`, parentElement);
+                     await sleep(delay);
+                     addStep(`Adding <span class="font-mono">${upperBound} * ${powerVal} = ${contribution}</span> to count.`, parentElement);
+                     await sleep(delay);
+                     count += contribution;
+                     addStep(`Current count = <span class="font-bold">${count}</span>.`, parentElement);
+                     await sleep(delay);
+                } else {
+                     addStep(`No smaller valid digits (0 to ${upperBound - 1}) can be placed here, or no remaining positions. No contribution added.`, parentElement);
+                     await sleep(delay);
+                }
+
+
+                // Check if the current digit violates the limit
+                if (digit > limit) {
+                    addStep(`<span class="font-bold text-red-600">Digit ${digit} > limit ${limit}!</span> No numbers starting with this prefix (or larger) can be powerful.`, parentElement);
+                    await sleep(delay);
+                    addStep(`Stopping prefix iteration. The count includes all valid numbers with strictly smaller prefixes.`, parentElement);
+                    hasViolatedLimit = true;
+                    break; // Exit the loop
+                } else {
+                     addStep(`Digit ${digit} <= limit ${limit}. Continue processing prefix.`, parentElement);
+                     await sleep(delay);
+                }
+                 currentStep.classList.remove('step-active'); // Deactivate previous step
+            }
+
+            // --- Suffix Check ---
+            if (!hasViolatedLimit) {
+                 currentStep = addStep(`Prefix iteration complete. All prefix digits were <= limit. Now check the suffix.`, parentElement, true);
+                 await sleep(delay * 1.5);
+                 addStep(`Comparing suffix <span class="font-mono number-part suffix-part">${suffix}</span> >= s <span class="font-mono">${s}</span>...`, parentElement);
+                 await sleep(delay);
+
+                if (suffix >= s) {
+                    addStep(`Suffix <span class="font-mono number-part suffix-part">${suffix}</span> is >= s <span class="font-mono">${s}</span>. The number ${xStr} itself is powerful (assuming prefix digits <= limit).`, parentElement);
+                    await sleep(delay);
+                    count += 1;
+                    addStep(`Incrementing count by 1. Final count = <span class="font-bold text-blue-600">${count}</span>.`, parentElement);
+                    await sleep(delay);
+                } else {
+                    addStep(`Suffix <span class="font-mono number-part suffix-part">${suffix}</span> is < s <span class="font-mono">${s}</span>. The number ${xStr} is not powerful.`, parentElement);
+                     await sleep(delay);
+                     addStep(`Count remains <span class="font-bold text-blue-600">${count}</span>.`, parentElement);
+                     await sleep(delay);
+                }
+            } else {
+                 addStep(`Prefix iteration stopped early due to digit > limit. The final count is <span class="font-bold text-blue-600">${count}</span>.`, parentElement, true);
+                 await sleep(delay);
+            }
+
+            return count;
+        }
+
+
+        // Main function to trigger the animation
+        async function startAnimation() {
+            const startVal = parseInt(document.getElementById('start').value);
+            const finishVal = parseInt(document.getElementById('finish').value);
+            const limitVal = parseInt(document.getElementById('limit').value);
+            const sVal = document.getElementById('s').value;
+
+            // Basic input validation
+            if (isNaN(startVal) || isNaN(finishVal) || isNaN(limitVal) || !sVal || startVal < 1 || finishVal < startVal || limitVal < 0 || limitVal > 9 || !/^\d+$/.test(sVal)) {
+                resultArea.textContent = 'Please enter valid inputs.';
+                resultArea.className = 'p-4 bg-red-100 text-red-800 rounded-md font-semibold text-lg';
+                return;
+            }
+
+             // Disable button during animation
+            const startButton = document.getElementById('startButton');
+            startButton.disabled = true;
+            startButton.textContent = 'Visualizing...';
+            startButton.classList.add('opacity-50', 'cursor-not-allowed');
+
+
+            animationArea.innerHTML = ''; // Clear previous animation
+            resultArea.textContent = 'Starting calculation...';
+            resultArea.className = 'p-4 bg-gray-100 text-gray-800 rounded-md font-semibold text-lg';
+
+
+            const finishStr = String(finishVal);
+            const startStr = String(startVal - 1); // Calculate for start - 1
+
+            // --- Calculate for finish ---
+            const finishDiv = document.createElement('div');
+            const finishTitle = document.createElement('h3');
+            finishTitle.className = 'text-lg font-semibold mb-2 text-indigo-700';
+            finishTitle.textContent = `1. Calculating powerful integers up to ${finishStr}`;
+            finishDiv.appendChild(finishTitle);
+            animationArea.appendChild(finishDiv);
+
+            const countFinish = await calculateAnimated(finishStr, sVal, limitVal, finishDiv);
+            addStep(`Calculation complete for ${finishStr}. Count = <span class="font-bold text-indigo-600">${countFinish}</span>`, finishDiv, true);
+            await sleep(delay * 2);
+
+
+             // --- Calculate for start - 1 ---
+             const startDiv = document.createElement('div');
+             const startTitle = document.createElement('h3');
+             startTitle.className = 'text-lg font-semibold mb-2 text-purple-700';
+             startTitle.textContent = `2. Calculating powerful integers up to ${startStr}`;
+             startDiv.appendChild(startTitle);
+             animationArea.appendChild(startDiv);
+
+            const countStart = await calculateAnimated(startStr, sVal, limitVal, startDiv);
+             addStep(`Calculation complete for ${startStr}. Count = <span class="font-bold text-purple-600">${countStart}</span>`, startDiv, true);
+             await sleep(delay * 2);
+
+            // --- Final Result ---
+            const finalResult = countFinish - countStart;
+            resultArea.innerHTML = `Final Result: count(${finishStr}) - count(${startStr}) = ${countFinish} - ${countStart} = <span class="text-2xl">${finalResult}</span>`;
+            resultArea.className = 'p-4 bg-green-100 text-green-800 rounded-md font-semibold text-lg text-center';
+
+             // Re-enable button
+            startButton.disabled = false;
+            startButton.textContent = 'Visualize Calculation';
+            startButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+
+    </script>
+
+</body>
+</html>
