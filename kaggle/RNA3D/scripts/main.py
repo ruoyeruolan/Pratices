@@ -50,12 +50,26 @@ def load_dataset(root: str | None = None) -> Tuple[DataLoader, DataLoader]:
 def masked_loss(pred: Tensor, target: Tensor):
 
     masked = ~torch.isnan(target).any(dim=1)
-
     if masked.any():
         pred = pred[masked]
         target = target[masked]
 
-        rmsd = torch.sqrt(torch.mean((pred - target) ** 2))
+        pred_center = pred.mean(dim=0, keepdim=True)
+        target_center = target.mean(dim=0, keepdim=True)
+        pred = pred - pred_center
+        target = target - target_center
+
+        H = pred.T @ target
+        U, S, Vt = torch.linalg.svd(H)
+        R = Vt.T @ U.T
+
+        if torch.det(R) < 0:
+            reflect = torch.eye(R.size(0), device=R.device, dtype=R.dtype)
+            reflect[-1, -1] = -1.0
+            R = R @ reflect
+
+        pred_aligned = pred @ R
+        rmsd = torch.sqrt(torch.mean((pred_aligned - target) ** 2))
         return rmsd
     else:
         return torch.tensor(0.0, device=pred.device, requires_grad=True)
